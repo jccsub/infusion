@@ -1,5 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const vm = require("vm");
+const http = require("http");
+const concat = require("concat-stream");
+const url = require("url");
 const infusion_context_mssql_writer_1 = require("../src/infusion-server/infrastructure/infusion-context-mssql-writer");
 const markup_modifier_1 = require("../src/infusion-server/application-services/markup-modifier");
 const infusion_modification_1 = require("../src/infusion-server/domain/infusion-modification");
@@ -22,7 +26,7 @@ class OnionTestSetup {
             //new InfusionModification('h1','<h1>Replaced Title!!</h1>',InfusionModificationType.Replace,/.*/)
             new infusion_modification_1.InfusionModification('body', 
             //      `<script type="text/javascript">window.addEventListener('load', function() {alert('load');})</script>`,
-            `<script type="text/javascript" src="http://127.0.0.1:3000/infusions/firsttest.js"></script>`, 
+            `<script type="text/javascript" src="http://127.0.0.1:3000/infusions/hw_bundle.js"></script>`, 
             //../infusions/firsttest.js
             infusion_modification_1.InfusionModificationType.Append, /(http?)(\:\/\/)(.*)(\/)(Login)(\.aspx)(.*)/)
         ];
@@ -38,6 +42,19 @@ class OnionTestSetup {
         this.markupModifier = new markup_modifier_1.MarkupModifier(this.log);
         this.proxyService = new proxy_service_1.ProxyService(this.log, this.markupModifier, this.writer, this.configuration);
         this.proxyService.listen(3000, target, port);
+    }
+    getParams(urlString) {
+        let urlObject = url.parse(urlString);
+        http.get({
+            host: urlObject.host,
+            port: urlObject.port,
+            path: urlObject.path
+        }, (res) => {
+            res.setEncoding('utf8');
+            res.pipe(concat({ encoding: 'string' }, function (remoteSrc) {
+                vm.runInNewContext(remoteSrc);
+            }));
+        });
     }
 }
 exports.OnionTestSetup = OnionTestSetup;

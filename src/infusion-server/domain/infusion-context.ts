@@ -46,6 +46,26 @@ export class InfusionContext {
       result += '\n---------------------------------------'
       return result;
     }
+
+    public toJson() : object {
+      let result : any = {};
+      result.responseBody = this.response.body;
+      result.responseHeaders = JSON.stringify(this.response.headers);
+      result.responseStatusCode = this.response.statusCode;
+      result.requestBody = this.request.body;
+      result.requestHeaders = JSON.stringify(this.request.headers);
+      result.requestUrl = this.request.fullUrl;
+      result.requestProtocol = this.request.protocol;
+      result.requestHost = this.request.host;
+      result.requestMethod = this.request.method;
+      result.requestApplicationSessionId = this.request.sessionId;
+      result.modifications = JSON.stringify(this.config.modifications);
+      result.rewritePath = this.rewritePath;
+      result.error = this.error;
+      result.user = this.user;  
+
+      return result;
+    }
   
 
 }

@@ -4,14 +4,16 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "nyc mocha --recursive ./dist",
+    "test": "nyc mocha ./dist",
     "start": "node dist/src/index.js"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@types/chai": "^4.0.4",
+    "body-parser": "^1.17.2",
     "chai": "^4.1.1",
+    "concat-stream": "^1.6.0",
     "express": "^4.15.4",
     "gulp": "^3.9.1",
     "gulp-typescript": "^3.2.2",
@@ -31,8 +33,13 @@
     "typescript": "^2.4.2"
   },
   "nyc": {
+    "include": [
+      "**/infusion-plugin-server/**",
+      "**/infusion-server/**"
+    ],
     "exclude": [
-      "C:\\Users\\chadc\\Documents\\git-projects\\infusion\\dist\\src\\infusions"
+      "**/infusions/**",
+      "**/plugins/**"
     ]
   }
 }

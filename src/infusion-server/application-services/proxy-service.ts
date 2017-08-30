@@ -17,6 +17,10 @@ import * as proxy from 'http-proxy-middleware';
 import * as express from 'express';
 
 
+/*
+Events:
+  infusionResponse(context)
+*/
 
 export class ProxyService extends events.EventEmitter{
   private markupModifier: MarkupModifier;
@@ -71,6 +75,7 @@ export class ProxyService extends events.EventEmitter{
         new InfusionProxyResponseHandler(this.log).handle(proxyRes, req, res);
         ((req  as any).context as InfusionContext).direction = InfusionContextDirection.Response;
         this.writer.write((req  as any).context as InfusionContext);
+        this.emit('infusionResponse',((req  as any).context as InfusionContext));
       },
       onProxyReq : (proxyReq, req, res) => { 
         new InfusionProxyRequestHandler(this.log, this.configuration).handle(proxyReq, req, res);
