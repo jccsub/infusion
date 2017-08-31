@@ -1,17 +1,19 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-const vm = require("vm");
-const http = require("http");
-const concat = require("concat-stream");
-const url = require("url");
-const infusion_context_mssql_writer_1 = require("../src/infusion-server/infrastructure/infusion-context-mssql-writer");
+const path = require("path");
+const infusion_plugin_enumerator_1 = require("../src/infusion-plugin-server/infusion-plugin-enumerator");
+const local_file_reader_1 = require("../src/infusion-plugin-server/infrastructure/local-file-reader");
+const local_file_enumerator_1 = require("../src/infusion-plugin-server/infrastructure/local-file-enumerator");
+const infusion_plugin_server_1 = require("../src/infusion-plugin-server/infusion-plugin-server");
+const session_writer_service_1 = require("../src/session-writer/session-writer-service");
+const session_writer_configuration_1 = require("../src/session-writer/session-writer-configuration");
 const markup_modifier_1 = require("../src/infusion-server/application-services/markup-modifier");
 const infusion_modification_1 = require("../src/infusion-server/domain/infusion-modification");
 const infusion_configuration_1 = require("../src/infusion-server/domain/infusion-configuration");
 const proxy_service_1 = require("../src/infusion-server/application-services/proxy-service");
 const winston_logger_1 = require("../src/winston-logger");
+const request = require("request-json");
 const port = 8001;
-//const target = 'https://httpbin.org/'
 const target = 'http://jccsubweb.newgen.corp';
 class OnionTestSetup {
     constructor() {
@@ -19,42 +21,30 @@ class OnionTestSetup {
     }
     startTest() {
         this.log = new winston_logger_1.WinstonLog();
-        this.writerConfig = new infusion_context_mssql_writer_1.InfusionContextMssqlWriterConfig('dev', 'usg', 'localhost', 'usproxy');
-        this.writer = new infusion_context_mssql_writer_1.InfusionContextMssqlWriter(this.log, this.writerConfig);
-        this.writer.initialize();
-        this.configuration.modifications = [
-            //new InfusionModification('h1','<h1>Replaced Title!!</h1>',InfusionModificationType.Replace,/.*/)
-            new infusion_modification_1.InfusionModification('body', 
-            //      `<script type="text/javascript">window.addEventListener('load', function() {alert('load');})</script>`,
-            `<script type="text/javascript" src="http://127.0.0.1:3000/infusions/hw_bundle.js"></script>`, 
-            //../infusions/firsttest.js
-            infusion_modification_1.InfusionModificationType.Append, /(http?)(\:\/\/)(.*)(\/)(Login)(\.aspx)(.*)/)
-        ];
-        this.configuration.irrelevantUrlSubstrings = [
-            'pingsession',
-            'setwindowclosedtime',
-            'checksessionisvalid',
-            'uscustomstyles'
-        ];
-        this.configuration.irrelevantResponseContentTypes = [
-            /image.*/
-        ];
+        this.writerConfig = new session_writer_configuration_1.SessionWriterConfiguration();
+        this.writerConfig.database = 'usproxy';
+        this.writerConfig.password = 'usg';
+        this.writerConfig.user = 'dev';
+        this.writerConfig.server = 'localhost';
+        new session_writer_service_1.SessionWriterService(this.log, this.writerConfig).listen(3001);
+        this.configuration.modifications = this.getModifications();
         this.markupModifier = new markup_modifier_1.MarkupModifier(this.log);
-        this.proxyService = new proxy_service_1.ProxyService(this.log, this.markupModifier, this.writer, this.configuration);
-        this.proxyService.listen(3000, target, port);
-    }
-    getParams(urlString) {
-        let urlObject = url.parse(urlString);
-        http.get({
-            host: urlObject.host,
-            port: urlObject.port,
-            path: urlObject.path
-        }, (res) => {
-            res.setEncoding('utf8');
-            res.pipe(concat({ encoding: 'string' }, function (remoteSrc) {
-                vm.runInNewContext(remoteSrc);
-            }));
+        this.proxyService = new proxy_service_1.ProxyService(this.log, this.markupModifier, this.configuration);
+        let clientToSessionWriter = request.createClient('http://localhost:3001');
+        this.proxyService.on('infusionResponse', (context) => {
+            clientToSessionWriter.post('/', context.flatten(), (err, res, body) => {
+            });
         });
+        this.proxyService.listen(3000, target, port);
+        let pluginPath = path.join(__dirname, '\\..\\..\\infusions');
+        let pluginEnumerator = new infusion_plugin_enumerator_1.InfusionPluginEnumerator(this.log, new local_file_enumerator_1.LocalFileEnumerator(this.log), new local_file_reader_1.LocalFileReader(this.log), pluginPath);
+        this.infusionPluginServer = new infusion_plugin_server_1.InfusionPluginServer(this.log, 'http://127.0.0.1', pluginPath, pluginEnumerator);
+        this.infusionPluginServer.listen(3002);
+    }
+    getModifications() {
+        return [
+            new infusion_modification_1.InfusionModification('body', `<script type="text/javascript" src="http://127.0.0.1:3002/hw_bundle.js"></script>`, infusion_modification_1.InfusionModificationType.Append, /(http?)(\:\/\/)(.*)(\/)(Login)(\.aspx)(.*)/)
+        ];
     }
 }
 exports.OnionTestSetup = OnionTestSetup;

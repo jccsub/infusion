@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "@types/chai": "^4.0.4",
+    "async-file": "^2.0.2",
     "body-parser": "^1.17.2",
     "chai": "^4.1.1",
     "concat-stream": "^1.6.0",
@@ -22,6 +23,8 @@
     "mocha": "^3.5.0",
     "mocha-typescript": "^1.1.7",
     "mssql": "^4.0.4",
+    "request": "^2.81.0",
+    "request-json": "^0.6.2",
     "typemoq": "^2.0.1",
     "winston": "^2.3.1"
   },

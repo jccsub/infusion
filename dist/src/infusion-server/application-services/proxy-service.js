@@ -9,12 +9,15 @@ const infusion_path_rewrite_handler_1 = require("../domain-services/event-handle
 const http = require("http");
 const proxy = require("http-proxy-middleware");
 const express = require("express");
+/*
+Events:
+  infusionResponse(context)
+*/
 class ProxyService extends events.EventEmitter {
     /* istanbul ignore next */
-    constructor(log, markupModifier, writer, configuration) {
+    constructor(log, markupModifier, configuration) {
         super();
         this.log = log;
-        this.writer = writer;
         this.configuration = configuration;
         this.markupModifier = markupModifier;
         this.expressApp = express();
@@ -48,7 +51,7 @@ class ProxyService extends events.EventEmitter {
                 this.markupModifier.performModifications(context.request.fullUrl, req, res);
                 new infusion_proxy_response_handler_1.InfusionProxyResponseHandler(this.log).handle(proxyRes, req, res);
                 req.context.direction = infusion_context_1.InfusionContextDirection.Response;
-                this.writer.write(req.context);
+                this.emit('infusionResponse', req.context);
             },
             onProxyReq: (proxyReq, req, res) => {
                 new infusion_proxy_request_handler_1.InfusionProxyRequestHandler(this.log, this.configuration).handle(proxyReq, req, res);

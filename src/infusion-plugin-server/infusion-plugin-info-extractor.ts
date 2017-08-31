@@ -1,40 +1,31 @@
+import * as http from 'http';
+import { Log } from '../logger';
 import { InfusionPluginInfo } from './infusion-plugin-info';
 
 export class InfusionPluginInfoExtractor {
 
-  private readonly pluginNameLabel = 'PLUGIN.NAME=';
-  private readonly pluginUrlPatternLabel = 'PLUGIN.URLPATTERN=';
-  public extract(pluginContent : string) : InfusionPluginInfo {    
-    let lines = pluginContent.split('\n');
-    var name : string = '';
-    let pattern : RegExp | undefined;
-    var pos : number;
-    let found = false;
+  private log : Log;
+  constructor(log: Log) {
+    this.log = log;
+  }
+  public extract(pluginFileName : string, pluginContent : string, req : any) : InfusionPluginInfo {    
+    let name = this.GetPluginAttribute(pluginContent, 'PLUGIN.NAME');
+    let pattern = this.GetPluginAttribute(pluginContent, 'PLUGIN.URLPATTERN');
+     return new InfusionPluginInfo(name,`${req.protocol}://${req.get('host')}/${pluginFileName}`, pattern);
+  }
 
-    lines.some((line) => {
-      pos = line.indexOf(this.pluginNameLabel);
+  private GetPluginAttribute(pluginContent : string, attributeName) : string {
+    let result = '';
+    const EQUALS_SIGN = 1;
+    pluginContent.split('\n').some((line) => {
+      let pos = line.indexOf(attributeName);
       if (pos >= 0) {
-        name = line.substr(pos + this.pluginNameLabel.length);
-        found = true;
+        result = line.substr(pos + attributeName.length + EQUALS_SIGN);
+        return true;
       }
-      else {
-        pos = line.indexOf(this.pluginUrlPatternLabel);
-        if (pos >= 0) {
-          pattern = new RegExp(line.substr(pos + this.pluginUrlPatternLabel.length));
-          //as soon as you find the url pattern, you're done so exit out of there https://stackoverflow.com/a/2641374          
-          return true;
-        }
-      }
-      return false;
+      return false;      
     });
-
-    if (found) {
-      throw new Error('Found plugin name label but not url pattern');
-    }
-    
-    return new InfusionPluginInfo(name, '', pattern);
-    
-    
+    return result;
   }
 
 

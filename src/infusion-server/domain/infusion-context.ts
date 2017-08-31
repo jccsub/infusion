@@ -47,7 +47,7 @@ export class InfusionContext {
       return result;
     }
 
-    public toJson() : object {
+    public flatten() : object {
       let result : any = {};
       result.responseBody = this.response.body;
       result.responseHeaders = JSON.stringify(this.response.headers);

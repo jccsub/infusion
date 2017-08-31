@@ -1,16 +1,18 @@
+import * as path from 'path';
+import { Log } from '../../logger';
 import * as fs from 'fs';
 import { FileEnumerator } from '../file-enumerator';
 
 
 export class LocalFileEnumerator implements FileEnumerator{
-  public enumerate(folder: string): Array<string> {
-    let result = new Array<string>();
-    fs.readdir(folder, (err, files) => {
-      files
-        .filter(file => { return file.substr(-3) === '.js'})
-        .forEach(file => { result.push(file); });
-    })
-    return result;
+  private log : Log;
+
+  constructor(log : Log) {
+    this.log = log;
+  }
+
+  public enumerate(folder: string) : Array<string>{
+    return fs.readdirSync(folder);
   }
 }
 

@@ -1,5 +1,4 @@
 import * as path from 'path';
-import { InfusionContextWriter } from '../domain-services/infusion-context-writer';
 import { InfusionContext, InfusionContextDirection } from '../domain/infusion-context';
 import * as events from 'events';
 import { MarkupModifier } from './markup-modifier';
@@ -28,15 +27,13 @@ export class ProxyService extends events.EventEmitter{
   private proxy : any;  
   //private connectApp;
   private configuration : InfusionConfiguration;
-  private writer : InfusionContextWriter;
   private expressApp : any;
 
 
   /* istanbul ignore next */
-  constructor(log : Log, markupModifier : MarkupModifier, writer : InfusionContextWriter, configuration : InfusionConfiguration) {
+  constructor(log : Log, markupModifier : MarkupModifier, configuration : InfusionConfiguration) {
     super();
     this.log = log;
-    this.writer = writer;
     this.configuration = configuration;
     this.markupModifier = markupModifier;
     this.expressApp = express();
@@ -74,7 +71,6 @@ export class ProxyService extends events.EventEmitter{
         this.markupModifier.performModifications(context.request.fullUrl, req, res);
         new InfusionProxyResponseHandler(this.log).handle(proxyRes, req, res);
         ((req  as any).context as InfusionContext).direction = InfusionContextDirection.Response;
-        this.writer.write((req  as any).context as InfusionContext);
         this.emit('infusionResponse',((req  as any).context as InfusionContext));
       },
       onProxyReq : (proxyReq, req, res) => { 

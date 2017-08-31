@@ -1,33 +1,30 @@
+import { InfusionPluginEnumerator } from './infusion-plugin-enumerator';
+import { Log } from '../logger';
 import * as express from 'express';
-import {NextFunction, Request, Response, Router, Application } from 'express'
-import * as path from 'path';
-import * as bodyParser from 'body-parser';
 
-
-/**
- * The server.
- *
- * @class Server
- */
 export class InfusionPluginServer {
 
-  private app: Application;
-  private router : Router;
+  private app: any;
+  private log : Log;
+  private pluginPath : string;
+  private pluginEnumerator : InfusionPluginEnumerator;
 
-
-  public static bootstrap(): InfusionPluginServer {
-    return new InfusionPluginServer();
+  constructor(log : Log, host : string, pluginPath : string, pluginEnumerator : InfusionPluginEnumerator) {
+    this.app = express();
+    this.log = log;
+    this.pluginEnumerator = pluginEnumerator;
+    this.pluginPath = pluginPath;
+    this.app.use(express.static(this.pluginPath));         
   }
 
-  constructor() {
-    this.app = express();
-    this.router = this.app.Router();
-    this.app.use(this.router);
-    this.app.use(express.static(path.join(__dirname, 'plugins')));
-    this.router.get('/plugin-info', (req, res) => {
-      
-    });
-
+  public listen(port : number) {
+    this.app.get('/plugins',(req,res) => {
+      let pluginArray =  this.pluginEnumerator.enumerate(req);
+      res.setHeader('Content-Type','application/json');
+      res.send(JSON.stringify(pluginArray));
+    });    
+    this.app.listen(port);
+    this.log.info(`InfusionPluginServer listening on port ${port}`);
   }
 
 }

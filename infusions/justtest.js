@@ -1,5 +1,5 @@
-//PLUGIN.NAME=Hello World
-//PLUGIN.URLPATTERN=\.*
+//PLUGIN.NAME=Just Testing
+//PLUGIN.URLPATTERN=.*login\.aspx
 
 /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache

@@ -13,6 +13,7 @@ export class MarkupModifier {
   }
 
   public performModifications(url : string, req, res) {
+    this.log.debug('performModifications');
     let context = (req.context as InfusionContext);
     var getProcessorFunction = require('harmon');
     var func = getProcessorFunction([],this.getModificationQueryFunctions(url, context));

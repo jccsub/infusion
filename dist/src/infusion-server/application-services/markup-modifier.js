@@ -5,6 +5,7 @@ class MarkupModifier {
         this.log = log;
     }
     performModifications(url, req, res) {
+        this.log.debug('performModifications');
         let context = req.context;
         var getProcessorFunction = require('harmon');
         var func = getProcessorFunction([], this.getModificationQueryFunctions(url, context));
