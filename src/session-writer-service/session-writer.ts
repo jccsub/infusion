@@ -1,4 +1,4 @@
-import { Session } from '../session-writer/session';
+import { Session } from '../session-writer-service/session';
 import { SessionWriterConfiguration } from './session-writer-configuration';
 import { Log } from '../logger';
 

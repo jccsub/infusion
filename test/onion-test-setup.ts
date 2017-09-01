@@ -1,11 +1,12 @@
+import { PluginQuery } from '../src/plugin-query-service/plugin-query';
 import * as path from 'path';
 import { PluginEnumerator } from '../src/plugin-query-service/plugin-enumerator';
 import { LocalFileReader } from '../src/plugin-query-service/infrastructure/local-file-reader';
 import { LocalFileEnumerator } from '../src/plugin-query-service/infrastructure/local-file-enumerator';
 import { QueryService } from '../src/plugin-query-service/query-service';
-import { SessionWriterService } from '../src/session-writer/session-writer-service';
-import { SessionWriterConfiguration } from '../src/session-writer/session-writer-configuration';
-import { SessionWriter } from '../src/session-writer/session-writer';
+import { SessionWriterService } from '../src/session-writer-service/session-writer-service';
+import { SessionWriterConfiguration } from '../src/session-writer-service/session-writer-configuration';
+import { SessionWriter } from '../src/session-writer-service/session-writer';
 import { Context } from '../src/proxy-service/domain/context';
 import { MarkupModifier } from '../src/proxy-service/application-services/markup-modifier';
 import { InfusionModification, InfusionModificationType } from '../src/proxy-service/domain/modification';
@@ -45,7 +46,8 @@ export class OnionTestSetup  {
     this.proxyService.listen(3000,target, port);
     let pluginPath = path.join(__dirname, '\\..\\..\\infusions');
     let pluginEnumerator = new PluginEnumerator(this.log, new LocalFileEnumerator(this.log), new LocalFileReader(this.log),pluginPath);
-    this.infusionPluginServer =  new QueryService(this.log,'http://127.0.0.1',pluginPath,pluginEnumerator);
+    let pluginQuery = new PluginQuery(this.log, pluginEnumerator);
+    this.infusionPluginServer =  new QueryService(this.log,'http://127.0.0.1',pluginPath,pluginEnumerator, pluginQuery);
     this.infusionPluginServer.listen(3002);
   }
 

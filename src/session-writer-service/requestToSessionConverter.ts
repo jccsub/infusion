@@ -1,4 +1,4 @@
-import { Session } from '../session-writer/session';
+import { Session } from '../session-writer-service/session';
 
 export class RequestToSessionConverter {
 

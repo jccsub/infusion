@@ -35,20 +35,21 @@ class MarkupModifierTest {
   @test
   testModificationsToReplace() {
     this.setupContextToReplace();    
-    this.markupModifier.performModifications(this.url, this.req, this.res);
+    this.markupModifier.performModifications(this.req, this.res);
   }
 
   @test
   testModificationsToAppend() {
     this.setupContextToAppend();
-    this.markupModifier.performModifications(this.url, this.req, this.res);
+    this.markupModifier.performModifications( this.req, this.res);
   }
 
   private setupContextToReplace() {
+    this.infusionContext.request.host = '127.0.0.1';
+    this.infusionContext.request.protocol = 'http';
     this.infusionContext.config.modifications = [
     new InfusionModification('h1', '<h1>Applied</h1>',InfusionModificationType.Replace,/test/),
     new InfusionModification('h1', '<h1>NotApplied</h1>',InfusionModificationType.Replace,/notfound/),
-
     ];
   }
 

@@ -68,10 +68,11 @@ export class ProxyService extends events.EventEmitter{
       onError : (err, req, res) => {new ErrorHandler(this.log).handle(err, req, res); },
       onProxyRes : (proxyRes,req,res) => { 
         let context = (req as any).context as Context;
-        this.markupModifier.performModifications(context.request.fullUrl, req, res);
+        this.emit('modify',context)
+        this.markupModifier.performModifications(req, res);
         new ProxyResponseHandler(this.log).handle(proxyRes, req, res);
-        ((req  as any).context as Context).direction = ContextDirection.Response;
-        this.emit('infusionResponse',((req  as any).context as Context));
+        context.direction = ContextDirection.Response;
+        this.emit('infusionResponse',context);
       },
       onProxyReq : (proxyReq, req, res) => { 
         new ProxyRequestHandler(this.log, this.configuration).handle(proxyReq, req, res);

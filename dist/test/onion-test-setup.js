@@ -1,12 +1,13 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const plugin_query_1 = require("../src/plugin-query-service/plugin-query");
 const path = require("path");
 const plugin_enumerator_1 = require("../src/plugin-query-service/plugin-enumerator");
 const local_file_reader_1 = require("../src/plugin-query-service/infrastructure/local-file-reader");
 const local_file_enumerator_1 = require("../src/plugin-query-service/infrastructure/local-file-enumerator");
 const query_service_1 = require("../src/plugin-query-service/query-service");
-const session_writer_service_1 = require("../src/session-writer/session-writer-service");
-const session_writer_configuration_1 = require("../src/session-writer/session-writer-configuration");
+const session_writer_service_1 = require("../src/session-writer-service/session-writer-service");
+const session_writer_configuration_1 = require("../src/session-writer-service/session-writer-configuration");
 const markup_modifier_1 = require("../src/proxy-service/application-services/markup-modifier");
 const modification_1 = require("../src/proxy-service/domain/modification");
 const configuration_1 = require("../src/proxy-service/domain/configuration");
@@ -38,7 +39,8 @@ class OnionTestSetup {
         this.proxyService.listen(3000, target, port);
         let pluginPath = path.join(__dirname, '\\..\\..\\infusions');
         let pluginEnumerator = new plugin_enumerator_1.PluginEnumerator(this.log, new local_file_enumerator_1.LocalFileEnumerator(this.log), new local_file_reader_1.LocalFileReader(this.log), pluginPath);
-        this.infusionPluginServer = new query_service_1.QueryService(this.log, 'http://127.0.0.1', pluginPath, pluginEnumerator);
+        let pluginQuery = new plugin_query_1.PluginQuery(this.log, pluginEnumerator);
+        this.infusionPluginServer = new query_service_1.QueryService(this.log, 'http://127.0.0.1', pluginPath, pluginEnumerator, pluginQuery);
         this.infusionPluginServer.listen(3002);
     }
     getModifications() {

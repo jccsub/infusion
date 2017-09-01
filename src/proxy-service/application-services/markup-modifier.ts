@@ -12,11 +12,11 @@ export class MarkupModifier {
     this.log = log;
   }
 
-  public performModifications(url : string, req, res) {
+  public performModifications(req, res) {
     this.log.debug('performModifications');
     let context = (req.context as Context);
     var getProcessorFunction = require('harmon');
-    var func = getProcessorFunction([],this.getModificationQueryFunctions(url, context));
+    var func = getProcessorFunction([],this.getModificationQueryFunctions( context.request.fullUrl, context));
     func(req, res, () => {});  
   }
 
