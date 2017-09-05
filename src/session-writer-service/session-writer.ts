@@ -63,7 +63,7 @@ export class SessionWriter {
       .input('error', sql.VarChar(2000), session.error)
       .input('userName', sql.Char(255), session.userName)
       .query(`
-          INSERT INTO [usproxy].[dbo].[session]
+          INSERT INTO [session]
           ([time]
           ,[responseBody]
           ,[responseHeaders]

@@ -1,9 +1,10 @@
+import * as events from 'events';
 import { PluginQuery } from './plugin-query';
 import { PluginEnumerator } from './plugin-enumerator';
 import { Log } from '../logger';
 import * as express from 'express';
 
-export class QueryService {
+export class QueryService extends events.EventEmitter{
 
   private app: any;
   private log : Log;
@@ -12,6 +13,7 @@ export class QueryService {
   private pluginQuery : PluginQuery;
 
   constructor(log : Log, host : string, pluginPath : string, pluginEnumerator : PluginEnumerator, pluginQuery : PluginQuery) {
+    super();
     this.app = express();
     this.log = log;
     this.pluginEnumerator = pluginEnumerator;
@@ -29,7 +31,8 @@ export class QueryService {
     this.app.get('/pluginsForUrl', (req, res) => {
       let url = req.query.url;
       if (url) {
-        let pluginsForUrl = this.pluginQuery.pickPluginsForUrl(url, this.pluginEnumerator);
+        let pluginsForUrl = this.pluginQuery.pickPluginsForUrl(url, req);
+        this.emit('pluginsForUrl',url, pluginsForUrl);
         res.send(JSON.stringify(pluginsForUrl))
       }
 

@@ -1,5 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const session_query_by_id_1 = require("../src/session-query-service/session-query-by-id");
+const session_query_configuration_1 = require("../src/session-query-service/session-query-configuration");
+const session_query_all_1 = require("../src/session-query-service/session-query-all");
+const session_query_service_1 = require("../src/session-query-service/session-query-service");
+const auto_html_service_1 = require("../src/automated-html-service/auto-html-service");
+const plugin_info_extractor_1 = require("../src/plugin-query-service/plugin-info-extractor");
 const plugin_query_1 = require("../src/plugin-query-service/plugin-query");
 const path = require("path");
 const plugin_enumerator_1 = require("../src/plugin-query-service/plugin-enumerator");
@@ -22,26 +28,50 @@ class OnionTestSetup {
     }
     startTest() {
         this.log = new winston_logger_1.WinstonLog();
-        this.writerConfig = new session_writer_configuration_1.SessionWriterConfiguration();
-        this.writerConfig.database = 'usproxy';
-        this.writerConfig.password = 'usg';
-        this.writerConfig.user = 'dev';
-        this.writerConfig.server = 'localhost';
-        new session_writer_service_1.SessionWriterService(this.log, this.writerConfig).listen(3001);
+        this.startupSessionWriterService(3001);
+        this.startupProxyService(3000, 3001);
+        this.startupInfusionPluginServer(3002);
+        this.startupAutomatedXmlService(3004);
+        this.startupSessionQueryService(3005);
+    }
+    startupProxyService(port, sessionWriterPort) {
         this.configuration.modifications = this.getModifications();
         this.markupModifier = new markup_modifier_1.MarkupModifier(this.log);
         this.proxyService = new service_1.ProxyService(this.log, this.markupModifier, this.configuration);
-        let clientToSessionWriter = request.createClient('http://localhost:3001');
+        let clientToSessionWriter = request.createClient(`http://localhost:${sessionWriterPort}`);
         this.proxyService.on('infusionResponse', (context) => {
             clientToSessionWriter.post('/', context.flatten(), (err, res, body) => {
             });
         });
         this.proxyService.listen(3000, target, port);
+    }
+    startupSessionWriterService(port) {
+        let writerConfig = new session_writer_configuration_1.SessionWriterConfiguration('dev', 'usg', 'localhost', 'usproxy');
+        new session_writer_service_1.SessionWriterService(this.log, writerConfig).listen(port);
+    }
+    startupInfusionPluginServer(port) {
         let pluginPath = path.join(__dirname, '\\..\\..\\infusions');
-        let pluginEnumerator = new plugin_enumerator_1.PluginEnumerator(this.log, new local_file_enumerator_1.LocalFileEnumerator(this.log), new local_file_reader_1.LocalFileReader(this.log), pluginPath);
+        let pluginEnumerator = new plugin_enumerator_1.PluginEnumerator(this.log, new plugin_info_extractor_1.PluginInfoExtractor(this.log, new local_file_reader_1.LocalFileReader(this.log)), new local_file_enumerator_1.LocalFileEnumerator(this.log), pluginPath);
         let pluginQuery = new plugin_query_1.PluginQuery(this.log, pluginEnumerator);
         this.infusionPluginServer = new query_service_1.QueryService(this.log, 'http://127.0.0.1', pluginPath, pluginEnumerator, pluginQuery);
+        this.infusionPluginServer.on('pluginsForUrl', (plugins) => {
+            let automateHtmlClient = request.createClient('http://127.0.0.1:3004');
+            automateHtmlClient.post('/', plugins, (err, res, body) => {
+                this.log.debug(`body-${body}`);
+            });
+        });
         this.infusionPluginServer.listen(3002);
+    }
+    startupAutomatedXmlService(port) {
+        let automatedHtml = new auto_html_service_1.AutomatedHtmlService(this.log);
+        automatedHtml.listen(port);
+    }
+    startupSessionQueryService(port) {
+        let sessionQueryConfig = new session_query_configuration_1.SessionQueryConfiguration('dev', 'usg', 'localhost', 'usproxy');
+        let sessionQueryAll = new session_query_all_1.SessionQueryAll(this.log, sessionQueryConfig);
+        let sessionQueryById = new session_query_by_id_1.SessionQueryById(this.log, sessionQueryConfig);
+        let sessionQueryService = new session_query_service_1.SessionQueryService(this.log, sessionQueryAll, sessionQueryById);
+        sessionQueryService.listen(port);
     }
     getModifications() {
         return [

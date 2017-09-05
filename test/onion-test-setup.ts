@@ -1,3 +1,10 @@
+import { SessionQueryById } from '../src/session-query-service/session-query-by-id';
+import { SessionQueryConfiguration } from '../src/session-query-service/session-query-configuration';
+import { SessionQueryAll } from '../src/session-query-service/session-query-all';
+import { SessionQueryService } from '../src/session-query-service/session-query-service';
+import { AutomatedHtmlService } from '../src/automated-html-service/auto-html-service';
+import { PluginInfo } from '../src/plugin-query-service/plugin-info';
+import { PluginInfoExtractor } from '../src/plugin-query-service/plugin-info-extractor';
 import { PluginQuery } from '../src/plugin-query-service/plugin-query';
 import * as path from 'path';
 import { PluginEnumerator } from '../src/plugin-query-service/plugin-enumerator';
@@ -26,29 +33,64 @@ export class OnionTestSetup  {
   private markupModifier : MarkupModifier;
 
   private infusionPluginServer : QueryService;
-  private writerConfig : SessionWriterConfiguration;
   public startTest() {
     this.log = new WinstonLog();
-    this.writerConfig = new SessionWriterConfiguration();
-    this.writerConfig.database = 'usproxy';
-    this.writerConfig.password = 'usg';
-    this.writerConfig.user = 'dev';
-    this.writerConfig.server = 'localhost';
-    new SessionWriterService(this.log,this.writerConfig).listen(3001);
+
+    this.startupSessionWriterService(3001);    
+    this.startupProxyService(3000,3001);
+    this.startupInfusionPluginServer(3002);
+    this.startupAutomatedXmlService(3004);
+    this.startupSessionQueryService(3005);
+  }
+
+  private startupProxyService(port : number, sessionWriterPort : number) {
     this.configuration.modifications =  this.getModifications();   
     this.markupModifier = new MarkupModifier(this.log);
     this.proxyService = new ProxyService(this.log, this.markupModifier, this.configuration );
-    let clientToSessionWriter = request.createClient('http://localhost:3001')
+    let clientToSessionWriter = request.createClient(`http://localhost:${sessionWriterPort}`)
     this.proxyService.on('infusionResponse',(context : Context) => {
       clientToSessionWriter.post('/', context.flatten(), (err, res, body) => {
       });
     });
     this.proxyService.listen(3000,target, port);
+  }
+
+  private startupSessionWriterService(port : number) {
+    let writerConfig = new SessionWriterConfiguration('dev','usg', 'localhost','usproxy');
+    new SessionWriterService(this.log,writerConfig).listen(port);
+  }
+
+  private startupInfusionPluginServer(port : number) {
     let pluginPath = path.join(__dirname, '\\..\\..\\infusions');
-    let pluginEnumerator = new PluginEnumerator(this.log, new LocalFileEnumerator(this.log), new LocalFileReader(this.log),pluginPath);
+    let pluginEnumerator = new PluginEnumerator(
+      this.log,
+      new PluginInfoExtractor(this.log,new LocalFileReader(this.log)),  
+      new LocalFileEnumerator(this.log), 
+      pluginPath);
     let pluginQuery = new PluginQuery(this.log, pluginEnumerator);
     this.infusionPluginServer =  new QueryService(this.log,'http://127.0.0.1',pluginPath,pluginEnumerator, pluginQuery);
+    this.infusionPluginServer.on('pluginsForUrl',(plugins : Array<PluginInfo>) => {
+      let automateHtmlClient = request.createClient('http://127.0.0.1:3004');
+      automateHtmlClient.post('/', plugins, (err, res, body) => {        
+        this.log.debug(`body-${body}`);
+      })
+    });
     this.infusionPluginServer.listen(3002);
+
+  }
+
+  private startupAutomatedXmlService(port : number) {
+    let automatedHtml = new AutomatedHtmlService(this.log);
+    automatedHtml.listen(port)
+    
+  }
+
+  private startupSessionQueryService(port: number) {
+    let sessionQueryConfig = new SessionQueryConfiguration('dev','usg', 'localhost', 'usproxy');
+    let sessionQueryAll = new SessionQueryAll(this.log, sessionQueryConfig);
+    let sessionQueryById = new SessionQueryById(this.log, sessionQueryConfig);
+    let sessionQueryService = new SessionQueryService(this.log, sessionQueryAll,sessionQueryById);
+    sessionQueryService.listen(port)
   }
 
   private getModifications() : Array<InfusionModification> {
