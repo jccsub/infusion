@@ -21,6 +21,8 @@ import { Configuration } from '../src/proxy-service/domain/configuration';
 import { ProxyService } from '../src/proxy-service/application-services/service';
 import { WinstonLog } from '../src/winston-logger';
 import { Log } from '../src/logger';
+import { RabbitMqExchangeClientFactory } from '../src/message-queue/exchange/rabbitmq-exchange-client-factory';
+import { ExchangeClientFactory } from '../src/message-queue/exchange/exchange-client-factory'
 import * as request from 'request-json';
 
 const port = 8001;
@@ -32,10 +34,12 @@ export class OnionTestSetup  {
   private configuration : Configuration = new Configuration();
   private markupModifier : MarkupModifier;
 
+  private exchangeClientFactory : ExchangeClientFactory;
+
   private infusionPluginServer : QueryService;
   public startTest() {
     this.log = new WinstonLog();
-
+    this.exchangeClientFactory = new RabbitMqExchangeClientFactory('amqp://127.0.0.1');
     this.startupSessionWriterService(3001);    
     this.startupProxyService(3000,3001);
     this.startupInfusionPluginServer(3002);
@@ -46,12 +50,15 @@ export class OnionTestSetup  {
   private startupProxyService(port : number, sessionWriterPort : number) {
     this.configuration.modifications =  this.getModifications();   
     this.markupModifier = new MarkupModifier(this.log);
-    this.proxyService = new ProxyService(this.log, this.markupModifier, this.configuration );
+    this.proxyService = new ProxyService(this.log, this.exchangeClientFactory, this.markupModifier, this.configuration );
     let clientToSessionWriter = request.createClient(`http://localhost:${sessionWriterPort}`)
+
+    /*
     this.proxyService.on('infusionResponse',(context : Context) => {
       clientToSessionWriter.post('/', context.flatten(), (err, res, body) => {
       });
     });
+*/
     this.proxyService.listen(3000,target, port);
   }
 
@@ -96,7 +103,7 @@ export class OnionTestSetup  {
   private getModifications() : Array<InfusionModification> {
     return [
       new InfusionModification('body',
-        `<script type="text/javascript" src="http://127.0.0.1:3002/hw_bundle.js"></script>`,
+        `<script type="text/javascript" src="http://127.0.0.1:3002/callback.js"></script>`,
         InfusionModificationType.Append,
         /(http?)(\:\/\/)(.*)(\/)(Login)(\.aspx)(.*)/)
       ];

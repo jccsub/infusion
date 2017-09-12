@@ -19,6 +19,7 @@ const modification_1 = require("../src/proxy-service/domain/modification");
 const configuration_1 = require("../src/proxy-service/domain/configuration");
 const service_1 = require("../src/proxy-service/application-services/service");
 const winston_logger_1 = require("../src/winston-logger");
+const rabbitmq_exchange_client_factory_1 = require("../src/message-queue/exchange/rabbitmq-exchange-client-factory");
 const request = require("request-json");
 const port = 8001;
 const target = 'http://jccsubweb.newgen.corp';
@@ -28,6 +29,7 @@ class OnionTestSetup {
     }
     startTest() {
         this.log = new winston_logger_1.WinstonLog();
+        this.exchangeClientFactory = new rabbitmq_exchange_client_factory_1.RabbitMqExchangeClientFactory('amqp://127.0.0.1');
         this.startupSessionWriterService(3001);
         this.startupProxyService(3000, 3001);
         this.startupInfusionPluginServer(3002);
@@ -37,12 +39,14 @@ class OnionTestSetup {
     startupProxyService(port, sessionWriterPort) {
         this.configuration.modifications = this.getModifications();
         this.markupModifier = new markup_modifier_1.MarkupModifier(this.log);
-        this.proxyService = new service_1.ProxyService(this.log, this.markupModifier, this.configuration);
+        this.proxyService = new service_1.ProxyService(this.log, this.exchangeClientFactory, this.markupModifier, this.configuration);
         let clientToSessionWriter = request.createClient(`http://localhost:${sessionWriterPort}`);
-        this.proxyService.on('infusionResponse', (context) => {
-            clientToSessionWriter.post('/', context.flatten(), (err, res, body) => {
-            });
+        /*
+        this.proxyService.on('infusionResponse',(context : Context) => {
+          clientToSessionWriter.post('/', context.flatten(), (err, res, body) => {
+          });
         });
+    */
         this.proxyService.listen(3000, target, port);
     }
     startupSessionWriterService(port) {
@@ -75,7 +79,7 @@ class OnionTestSetup {
     }
     getModifications() {
         return [
-            new modification_1.InfusionModification('body', `<script type="text/javascript" src="http://127.0.0.1:3002/hw_bundle.js"></script>`, modification_1.InfusionModificationType.Append, /(http?)(\:\/\/)(.*)(\/)(Login)(\.aspx)(.*)/)
+            new modification_1.InfusionModification('body', `<script type="text/javascript" src="http://127.0.0.1:3002/callback.js"></script>`, modification_1.InfusionModificationType.Append, /(http?)(\:\/\/)(.*)(\/)(Login)(\.aspx)(.*)/)
         ];
     }
 }

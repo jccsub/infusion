@@ -21,6 +21,20 @@ export class SessionQueryService extends events.EventEmitter {
   }
 
   public listen(port : number) {
+
+    this.app.use(function(req, res, next) {
+      res.header('Access-Control-Allow-Origin', req.get('Origin') || '*');
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
+      res.header('Access-Control-Expose-Headers', 'Content-Length');
+      res.header('Access-Control-Allow-Headers', 'Accept, Authorization, Content-Type, X-Requested-With, Range');
+      if (req.method === 'OPTIONS') {
+        return res.send(200);
+      } else {
+        return next();
+      }
+    });    
+
     this.app.get('/all',async (req, res) => {
       let rows = await this.queryAll.query();
       let converter = new RowsetToSessionInfoCoverter();
@@ -33,6 +47,13 @@ export class SessionQueryService extends events.EventEmitter {
       let results = converter.convert(rows);
       res.send(results);
     });
+    //testing
+    this.app.post('/urls', (req, res) => {
+      let results = {
+        "urls": ["http://127.0.0.1:8080/dist/mytest.js"  ]
+      }
+      res.send(results);
+    })
     this.app.listen(port);
     this.log.info(`Session Query Service listening on port ${port}`);
   }

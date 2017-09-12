@@ -1,3 +1,5 @@
+import { ExchangeClientFactory } from '../../message-queue/exchange/exchange-client-factory';
+import { MessagingEventEmitter } from '../../message-queue/messaging-event-emitter';
 import * as path from 'path';
 import { Context, ContextDirection } from '../domain/context';
 import * as events from 'events';
@@ -21,7 +23,7 @@ Events:
   infusionResponse(context)
 */
 
-export class ProxyService extends events.EventEmitter{
+export class ProxyService extends MessagingEventEmitter{
   private markupModifier: MarkupModifier;
   private log: Log;
   private proxy : any;  
@@ -31,8 +33,8 @@ export class ProxyService extends events.EventEmitter{
 
 
   /* istanbul ignore next */
-  constructor(log : Log, markupModifier : MarkupModifier, configuration : Configuration) {
-    super();
+  constructor(log : Log, exchangeClientFactory : ExchangeClientFactory, markupModifier : MarkupModifier, configuration : Configuration) {
+    super(exchangeClientFactory);
     this.log = log;
     this.configuration = configuration;
     this.markupModifier = markupModifier;
@@ -68,11 +70,9 @@ export class ProxyService extends events.EventEmitter{
       onError : (err, req, res) => {new ErrorHandler(this.log).handle(err, req, res); },
       onProxyRes : (proxyRes,req,res) => { 
         let context = (req as any).context as Context;
-        this.emit('modify',context)
         this.markupModifier.performModifications(req, res);
         new ProxyResponseHandler(this.log).handle(proxyRes, req, res);
         context.direction = ContextDirection.Response;
-        this.emit('infusionResponse',context);
       },
       onProxyReq : (proxyReq, req, res) => { 
         new ProxyRequestHandler(this.log, this.configuration).handle(proxyReq, req, res);
