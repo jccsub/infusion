@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const plugin_upload_service_1 = require("../src/plugin-upload-service/plugin-upload-service");
 const session_query_by_id_1 = require("../src/session-query-service/session-query-by-id");
 const session_query_configuration_1 = require("../src/session-query-service/session-query-configuration");
 const session_query_all_1 = require("../src/session-query-service/session-query-all");
@@ -19,7 +20,6 @@ const modification_1 = require("../src/proxy-service/domain/modification");
 const configuration_1 = require("../src/proxy-service/domain/configuration");
 const service_1 = require("../src/proxy-service/application-services/service");
 const winston_logger_1 = require("../src/winston-logger");
-const rabbitmq_exchange_client_factory_1 = require("../src/message-queue/exchange/rabbitmq-exchange-client-factory");
 const request = require("request-json");
 const port = 8001;
 const target = 'http://jccsubweb.newgen.corp';
@@ -29,17 +29,17 @@ class OnionTestSetup {
     }
     startTest() {
         this.log = new winston_logger_1.WinstonLog();
-        this.exchangeClientFactory = new rabbitmq_exchange_client_factory_1.RabbitMqExchangeClientFactory('amqp://127.0.0.1');
         this.startupSessionWriterService(3001);
         this.startupProxyService(3000, 3001);
         this.startupInfusionPluginServer(3002);
         this.startupAutomatedXmlService(3004);
         this.startupSessionQueryService(3005);
+        this.startupPluginUploadService(3006);
     }
     startupProxyService(port, sessionWriterPort) {
         this.configuration.modifications = this.getModifications();
         this.markupModifier = new markup_modifier_1.MarkupModifier(this.log);
-        this.proxyService = new service_1.ProxyService(this.log, this.exchangeClientFactory, this.markupModifier, this.configuration);
+        this.proxyService = new service_1.ProxyService(this.log, this.markupModifier, this.configuration);
         let clientToSessionWriter = request.createClient(`http://localhost:${sessionWriterPort}`);
         /*
         this.proxyService.on('infusionResponse',(context : Context) => {
@@ -76,6 +76,10 @@ class OnionTestSetup {
         let sessionQueryById = new session_query_by_id_1.SessionQueryById(this.log, sessionQueryConfig);
         let sessionQueryService = new session_query_service_1.SessionQueryService(this.log, sessionQueryAll, sessionQueryById);
         sessionQueryService.listen(port);
+    }
+    startupPluginUploadService(port) {
+        let uploadService = new plugin_upload_service_1.PluginUploadService(this.log);
+        uploadService.listen(port);
     }
     getModifications() {
         return [

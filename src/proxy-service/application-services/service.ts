@@ -1,5 +1,3 @@
-import { ExchangeClientFactory } from '../../message-queue/exchange/exchange-client-factory';
-import { MessagingEventEmitter } from '../../message-queue/messaging-event-emitter';
 import * as path from 'path';
 import { Context, ContextDirection } from '../domain/context';
 import * as events from 'events';
@@ -17,13 +15,12 @@ import { Log } from '../../logger';
 import * as proxy from 'http-proxy-middleware';
 import * as express from 'express';
 
-
 /*
 Events:
   infusionResponse(context)
 */
 
-export class ProxyService extends MessagingEventEmitter{
+export class ProxyService {
   private markupModifier: MarkupModifier;
   private log: Log;
   private proxy : any;  
@@ -33,8 +30,7 @@ export class ProxyService extends MessagingEventEmitter{
 
 
   /* istanbul ignore next */
-  constructor(log : Log, exchangeClientFactory : ExchangeClientFactory, markupModifier : MarkupModifier, configuration : Configuration) {
-    super(exchangeClientFactory);
+  constructor(log : Log, markupModifier : MarkupModifier, configuration : Configuration) {
     this.log = log;
     this.configuration = configuration;
     this.markupModifier = markupModifier;

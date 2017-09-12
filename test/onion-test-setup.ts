@@ -1,3 +1,4 @@
+import { PluginUploadService } from '../src/plugin-upload-service/plugin-upload-service';
 import { SessionQueryById } from '../src/session-query-service/session-query-by-id';
 import { SessionQueryConfiguration } from '../src/session-query-service/session-query-configuration';
 import { SessionQueryAll } from '../src/session-query-service/session-query-all';
@@ -21,8 +22,6 @@ import { Configuration } from '../src/proxy-service/domain/configuration';
 import { ProxyService } from '../src/proxy-service/application-services/service';
 import { WinstonLog } from '../src/winston-logger';
 import { Log } from '../src/logger';
-import { RabbitMqExchangeClientFactory } from '../src/message-queue/exchange/rabbitmq-exchange-client-factory';
-import { ExchangeClientFactory } from '../src/message-queue/exchange/exchange-client-factory'
 import * as request from 'request-json';
 
 const port = 8001;
@@ -34,23 +33,21 @@ export class OnionTestSetup  {
   private configuration : Configuration = new Configuration();
   private markupModifier : MarkupModifier;
 
-  private exchangeClientFactory : ExchangeClientFactory;
-
   private infusionPluginServer : QueryService;
   public startTest() {
     this.log = new WinstonLog();
-    this.exchangeClientFactory = new RabbitMqExchangeClientFactory('amqp://127.0.0.1');
     this.startupSessionWriterService(3001);    
     this.startupProxyService(3000,3001);
     this.startupInfusionPluginServer(3002);
     this.startupAutomatedXmlService(3004);
     this.startupSessionQueryService(3005);
+    this.startupPluginUploadService(3006);
   }
 
   private startupProxyService(port : number, sessionWriterPort : number) {
     this.configuration.modifications =  this.getModifications();   
     this.markupModifier = new MarkupModifier(this.log);
-    this.proxyService = new ProxyService(this.log, this.exchangeClientFactory, this.markupModifier, this.configuration );
+    this.proxyService = new ProxyService(this.log, this.markupModifier, this.configuration );
     let clientToSessionWriter = request.createClient(`http://localhost:${sessionWriterPort}`)
 
     /*
@@ -98,6 +95,11 @@ export class OnionTestSetup  {
     let sessionQueryById = new SessionQueryById(this.log, sessionQueryConfig);
     let sessionQueryService = new SessionQueryService(this.log, sessionQueryAll,sessionQueryById);
     sessionQueryService.listen(port)
+  }
+
+  private startupPluginUploadService(port: number) {
+    let uploadService = new PluginUploadService(this.log);
+    uploadService.listen(port);
   }
 
   private getModifications() : Array<InfusionModification> {
