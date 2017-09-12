@@ -50,7 +50,7 @@ export class SessionQueryService extends events.EventEmitter {
     //testing
     this.app.post('/urls', (req, res) => {
       let results = {
-        "urls": ["http://127.0.0.1:8080/dist/mytest.js"  ]
+        "urls": ["http://127.0.0.1:3002/pluginTest.js"  ]
       }
       res.send(results);
     })
