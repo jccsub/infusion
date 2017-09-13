@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const portal_server_1 = require("../src/portal/portal-server");
 const plugin_upload_service_1 = require("../src/plugin-upload-service/plugin-upload-service");
 const session_query_by_id_1 = require("../src/session-query-service/session-query-by-id");
 const session_query_configuration_1 = require("../src/session-query-service/session-query-configuration");
@@ -35,6 +36,7 @@ class OnionTestSetup {
         this.startupAutomatedXmlService(3004);
         this.startupSessionQueryService(3005);
         this.startupPluginUploadService(3006);
+        this.startupPortalServer(3007);
     }
     startupProxyService(port, sessionWriterPort) {
         this.configuration.modifications = this.getModifications();
@@ -69,6 +71,11 @@ class OnionTestSetup {
     startupAutomatedXmlService(port) {
         let automatedHtml = new auto_html_service_1.AutomatedHtmlService(this.log);
         automatedHtml.listen(port);
+    }
+    startupPortalServer(port) {
+        let clientPath = path.join(__dirname, '\\..\\..\\dist');
+        let portalServer = new portal_server_1.PortalServer(this.log, clientPath);
+        portalServer.listen(port);
     }
     startupSessionQueryService(port) {
         let sessionQueryConfig = new session_query_configuration_1.SessionQueryConfiguration('dev', 'usg', 'localhost', 'usproxy');

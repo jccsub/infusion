@@ -1,3 +1,4 @@
+import { PortalServer } from '../src/portal/portal-server';
 import { PluginUploadService } from '../src/plugin-upload-service/plugin-upload-service';
 import { SessionQueryById } from '../src/session-query-service/session-query-by-id';
 import { SessionQueryConfiguration } from '../src/session-query-service/session-query-configuration';
@@ -42,6 +43,7 @@ export class OnionTestSetup  {
     this.startupAutomatedXmlService(3004);
     this.startupSessionQueryService(3005);
     this.startupPluginUploadService(3006);
+    this.startupPortalServer(3007);
   }
 
   private startupProxyService(port : number, sessionWriterPort : number) {
@@ -87,6 +89,12 @@ export class OnionTestSetup  {
     let automatedHtml = new AutomatedHtmlService(this.log);
     automatedHtml.listen(port)
     
+  }
+
+  private startupPortalServer(port: number) {
+    let clientPath = path.join(__dirname,'\\..\\..\\dist');
+    let portalServer = new PortalServer(this.log, clientPath);
+    portalServer.listen(port);
   }
 
   private startupSessionQueryService(port: number) {
