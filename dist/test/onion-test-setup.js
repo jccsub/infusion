@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const test_service_1 = require("../src/test-service/test-service");
 const portal_server_1 = require("../src/portal/portal-server");
 const plugin_upload_service_1 = require("../src/plugin-upload-service/plugin-upload-service");
 const session_query_by_id_1 = require("../src/session-query-service/session-query-by-id");
@@ -37,19 +38,18 @@ class OnionTestSetup {
         this.startupSessionQueryService(3005);
         this.startupPluginUploadService(3006);
         this.startupPortalServer(3007);
+        this.startupTestService(3008);
     }
     startupProxyService(port, sessionWriterPort) {
         this.configuration.modifications = this.getModifications();
         this.markupModifier = new markup_modifier_1.MarkupModifier(this.log);
         this.proxyService = new service_1.ProxyService(this.log, this.markupModifier, this.configuration);
         let clientToSessionWriter = request.createClient(`http://localhost:${sessionWriterPort}`);
-        /*
-        this.proxyService.on('infusionResponse',(context : Context) => {
-          clientToSessionWriter.post('/', context.flatten(), (err, res, body) => {
-          });
-        });
-    */
         this.proxyService.listen(3000, target, port);
+    }
+    startupTestService(port) {
+        let clientPath = '\\..\\..\\src\\test-service';
+        new test_service_1.TestService(this.log, clientPath).listen(port);
     }
     startupSessionWriterService(port) {
         let writerConfig = new session_writer_configuration_1.SessionWriterConfiguration('dev', 'usg', 'localhost', 'usproxy');

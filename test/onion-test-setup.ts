@@ -1,3 +1,4 @@
+import { TestService } from '../src/test-service/test-service';
 import { PortalServer } from '../src/portal/portal-server';
 import { PluginUploadService } from '../src/plugin-upload-service/plugin-upload-service';
 import { SessionQueryById } from '../src/session-query-service/session-query-by-id';
@@ -44,6 +45,7 @@ export class OnionTestSetup  {
     this.startupSessionQueryService(3005);
     this.startupPluginUploadService(3006);
     this.startupPortalServer(3007);
+    this.startupTestService(3008);
   }
 
   private startupProxyService(port : number, sessionWriterPort : number) {
@@ -51,16 +53,14 @@ export class OnionTestSetup  {
     this.markupModifier = new MarkupModifier(this.log);
     this.proxyService = new ProxyService(this.log, this.markupModifier, this.configuration );
     let clientToSessionWriter = request.createClient(`http://localhost:${sessionWriterPort}`)
-
-    /*
-    this.proxyService.on('infusionResponse',(context : Context) => {
-      clientToSessionWriter.post('/', context.flatten(), (err, res, body) => {
-      });
-    });
-*/
     this.proxyService.listen(3000,target, port);
   }
 
+  private startupTestService(port : number) {
+    let clientPath = '\\..\\..\\src\\test-service';
+    new TestService(this.log, clientPath).listen(port);
+
+  }
   private startupSessionWriterService(port : number) {
     let writerConfig = new SessionWriterConfiguration('dev','usg', 'localhost','usproxy');
     new SessionWriterService(this.log,writerConfig).listen(port);
