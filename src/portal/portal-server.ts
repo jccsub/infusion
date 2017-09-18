@@ -1,5 +1,6 @@
 import { Log } from '../logger';
 import * as express from 'express';
+import * as session from 'express-session';
 
 export class PortalServer {
 
@@ -8,8 +9,15 @@ export class PortalServer {
   private clientPath : string;
   constructor(log : Log, clientPath : string ) {
     this.app = express();
+    var session = require('express-session');
     this.log = log;
     this.clientPath = clientPath;
+    this.app.use(session({
+      secret: 'keyboard cat',
+      resave: false,
+      saveUninitialized: true,
+      cookie: { secure: false }
+    }))
     this.app.use(express.static(this.clientPath));         
   }
 
@@ -19,3 +27,4 @@ export class PortalServer {
   }
 
 }
+
