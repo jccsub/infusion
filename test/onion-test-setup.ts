@@ -39,7 +39,7 @@ export class OnionTestSetup  {
   public startTest() {
     this.log = new WinstonLog();
     this.startupSessionWriterService(3001);    
-    this.startupProxyService(3000,3001);
+    //this.startupProxyService(3000,3001);
     this.startupInfusionPluginServer(3002);
     this.startupAutomatedXmlService(3004);
     this.startupSessionQueryService(3005);
