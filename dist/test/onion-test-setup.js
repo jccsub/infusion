@@ -1,51 +1,69 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const session_writer_service_1 = require("../src/session-services/session-writer-service/session-writer-service");
+const session_writer_configuration_1 = require("../src/session-services/session-writer-service/session-writer-configuration");
+const modification_1 = require("../src/proxy-services/proxy-service/domain/modification");
+const proxy_factory_service_1 = require("../src/proxy-services/proxy-factory-service/proxy-factory-service");
+const configuration_1 = require("../src/proxy-services/proxy-service/domain/configuration");
+const proxy_provider_service_1 = require("../src/proxy-services/proxy-provider-service/proxy-provider-service");
+const local_file_enumerator_1 = require("../src/plugin-services/plugin-query-service/infrastructure/local-file-enumerator");
+const plugin_info_extractor_1 = require("../src/plugin-services/plugin-query-service/plugin-info-extractor");
+const local_file_reader_1 = require("../src/plugin-services/plugin-query-service/infrastructure/local-file-reader");
+const query_service_1 = require("../src/plugin-services/plugin-query-service/query-service");
+const proxy_provider_1 = require("../src/common/servicebus/events/proxy-provider");
+const redis_dictionary_1 = require("../src/common/dictionary/redis-dictionary");
+const rabbitmq_servicebus_1 = require("../src/common/servicebus/rabbitmq-servicebus");
 const test_service_1 = require("../src/test-service/test-service");
 const portal_server_1 = require("../src/portal/portal-server");
-const plugin_upload_service_1 = require("../src/plugin-upload-service/plugin-upload-service");
-const session_query_by_id_1 = require("../src/session-query-service/session-query-by-id");
-const session_query_configuration_1 = require("../src/session-query-service/session-query-configuration");
-const session_query_all_1 = require("../src/session-query-service/session-query-all");
-const session_query_service_1 = require("../src/session-query-service/session-query-service");
-const auto_html_service_1 = require("../src/automated-html-service/auto-html-service");
-const plugin_info_extractor_1 = require("../src/plugin-query-service/plugin-info-extractor");
-const plugin_query_1 = require("../src/plugin-query-service/plugin-query");
 const path = require("path");
-const plugin_enumerator_1 = require("../src/plugin-query-service/plugin-enumerator");
-const local_file_reader_1 = require("../src/plugin-query-service/infrastructure/local-file-reader");
-const local_file_enumerator_1 = require("../src/plugin-query-service/infrastructure/local-file-enumerator");
-const query_service_1 = require("../src/plugin-query-service/query-service");
-const session_writer_service_1 = require("../src/session-writer-service/session-writer-service");
-const session_writer_configuration_1 = require("../src/session-writer-service/session-writer-configuration");
-const markup_modifier_1 = require("../src/proxy-service/application-services/markup-modifier");
-const modification_1 = require("../src/proxy-service/domain/modification");
-const configuration_1 = require("../src/proxy-service/domain/configuration");
-const service_1 = require("../src/proxy-service/application-services/service");
-const winston_logger_1 = require("../src/winston-logger");
 const request = require("request-json");
+const plugin_enumerator_1 = require("../src/plugin-services/plugin-query-service/plugin-enumerator");
+const plugin_query_1 = require("../src/plugin-services/plugin-query-service/plugin-query");
+const plugin_upload_service_1 = require("../src/plugin-services/plugin-upload-service/plugin-upload-service");
+const session_query_all_1 = require("../src/session-services/session-query-service/session-query-all");
+const session_query_by_id_1 = require("../src/session-services/session-query-service/session-query-by-id");
+const session_query_service_1 = require("../src/session-services/session-query-service/session-query-service");
+const session_query_configuration_1 = require("../src/session-services/session-query-service/session-query-configuration");
 const port = 8001;
 const target = 'http://jccsubweb.newgen.corp';
 class OnionTestSetup {
-    constructor() {
+    constructor(log) {
         this.configuration = new configuration_1.Configuration();
+        this.log = log;
+        this.servicebus = new rabbitmq_servicebus_1.RabbitMqServiceBus(this.log);
+        this.proxyDictionary = new redis_dictionary_1.RedisDictionary(this.log);
     }
     startTest() {
-        this.log = new winston_logger_1.WinstonLog();
         this.startupSessionWriterService(3001);
-        //this.startupProxyService(3000,3001);
+        this.startupProxyFactoryService();
         this.startupInfusionPluginServer(3002);
-        this.startupAutomatedXmlService(3004);
         this.startupSessionQueryService(3005);
         this.startupPluginUploadService(3006);
         this.startupPortalServer(3007);
         this.startupTestService(3008);
+        this.startupProxyProviderService();
     }
-    startupProxyService(port, sessionWriterPort) {
+    startupProxyProviderService() {
+        let providerService = new proxy_provider_service_1.ProxyProviderService(this.log, this.servicebus, this.configuration, this.proxyDictionary);
+        providerService.listen();
+        let sb = new rabbitmq_servicebus_1.RabbitMqServiceBus(this.log);
+        sb.listen(proxy_provider_1.ProxyProviderResponse.event, (response) => {
+            this.log.warn(`oniontest - received proxy provider response: ${response.url}`);
+        });
+        let sb2 = new rabbitmq_servicebus_1.RabbitMqServiceBus(this.log);
+        sb2.send(proxy_provider_1.ProxyProviderRequest.event, new proxy_provider_1.ProxyProviderRequest('jccsub'));
+        setTimeout(() => {
+            let sb3 = new rabbitmq_servicebus_1.RabbitMqServiceBus(this.log);
+            sb3.listen(proxy_provider_1.ProxyProviderResponse.event, (response) => {
+                this.log.warn(`oniontest - received proxy provider response: ${response.url}`);
+            });
+            sb3.send(proxy_provider_1.ProxyProviderRequest.event, new proxy_provider_1.ProxyProviderRequest('jccsub'));
+        }, 5000);
+    }
+    startupProxyFactoryService() {
         this.configuration.modifications = this.getModifications();
-        this.markupModifier = new markup_modifier_1.MarkupModifier(this.log);
-        this.proxyService = new service_1.ProxyService(this.log, this.markupModifier, this.configuration);
-        let clientToSessionWriter = request.createClient(`http://localhost:${sessionWriterPort}`);
-        this.proxyService.listen(3000, target, port);
+        let proxyFactory = new proxy_factory_service_1.ProxyFactoryService(this.log, new rabbitmq_servicebus_1.RabbitMqServiceBus(this.log), this.configuration);
+        proxyFactory.listen();
     }
     startupTestService(port) {
         let clientPath = '\\..\\..\\src\\test-service';
@@ -67,10 +85,6 @@ class OnionTestSetup {
             });
         });
         this.infusionPluginServer.listen(3002);
-    }
-    startupAutomatedXmlService(port) {
-        let automatedHtml = new auto_html_service_1.AutomatedHtmlService(this.log);
-        automatedHtml.listen(port);
     }
     startupPortalServer(port) {
         let clientPath = path.join(__dirname, '\\..\\..\\dist');

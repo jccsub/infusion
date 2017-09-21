@@ -1,60 +1,93 @@
+import { SessionWriterService } from '../src/session-services/session-writer-service/session-writer-service';
+import { SessionWriterConfiguration } from '../src/session-services/session-writer-service/session-writer-configuration';
+import { InfusionModification, InfusionModificationType } from '../src/proxy-services/proxy-service/domain/modification';
+import { ProxyFactoryService } from '../src/proxy-services/proxy-factory-service/proxy-factory-service';
+import { MarkupModifier } from '../src/proxy-services/proxy-service/application-services/markup-modifier';
+import { Configuration } from '../src/proxy-services/proxy-service/domain/configuration';
+import { ProxyService } from '../src/proxy-services/proxy-service/application-services/proxy-service';
+import { ProxyProviderService } from '../src/proxy-services/proxy-provider-service/proxy-provider-service';
+import { LocalFileEnumerator } from '../src/plugin-services/plugin-query-service/infrastructure/local-file-enumerator';
+import { PluginInfoExtractor } from '../src/plugin-services/plugin-query-service/plugin-info-extractor';
+import { LocalFileReader } from '../src/plugin-services/plugin-query-service/infrastructure/local-file-reader';
+import { QueryService } from '../src/plugin-services/plugin-query-service/query-service';
+import { ProxyProviderRequest, ProxyProviderResponse } from '../src/common/servicebus/events/proxy-provider';
+import { RedisDictionary } from '../src/common/dictionary/redis-dictionary';
+import { Dictionary } from '../src/common/dictionary/dictionary';
+import { ServiceBus } from '../src/common/servicebus/servicebus';
+import { ProxyFactoryRequest, ProxyFactoryResponse} from '../src/common/servicebus/events/proxy-factory';
+import { RabbitMqServiceBus } from '../src/common/servicebus/rabbitmq-servicebus';
 import { TestService } from '../src/test-service/test-service';
 import { PortalServer } from '../src/portal/portal-server';
-import { PluginUploadService } from '../src/plugin-upload-service/plugin-upload-service';
-import { SessionQueryById } from '../src/session-query-service/session-query-by-id';
-import { SessionQueryConfiguration } from '../src/session-query-service/session-query-configuration';
-import { SessionQueryAll } from '../src/session-query-service/session-query-all';
-import { SessionQueryService } from '../src/session-query-service/session-query-service';
-import { AutomatedHtmlService } from '../src/automated-html-service/auto-html-service';
-import { PluginInfo } from '../src/plugin-query-service/plugin-info';
-import { PluginInfoExtractor } from '../src/plugin-query-service/plugin-info-extractor';
-import { PluginQuery } from '../src/plugin-query-service/plugin-query';
 import * as path from 'path';
-import { PluginEnumerator } from '../src/plugin-query-service/plugin-enumerator';
-import { LocalFileReader } from '../src/plugin-query-service/infrastructure/local-file-reader';
-import { LocalFileEnumerator } from '../src/plugin-query-service/infrastructure/local-file-enumerator';
-import { QueryService } from '../src/plugin-query-service/query-service';
-import { SessionWriterService } from '../src/session-writer-service/session-writer-service';
-import { SessionWriterConfiguration } from '../src/session-writer-service/session-writer-configuration';
-import { SessionWriter } from '../src/session-writer-service/session-writer';
-import { Context } from '../src/proxy-service/domain/context';
-import { MarkupModifier } from '../src/proxy-service/application-services/markup-modifier';
-import { InfusionModification, InfusionModificationType } from '../src/proxy-service/domain/modification';
-import { Configuration } from '../src/proxy-service/domain/configuration';
-import { ProxyService } from '../src/proxy-service/application-services/service';
 import { WinstonLog } from '../src/winston-logger';
 import { Log } from '../src/logger';
 import * as request from 'request-json';
+import { PluginEnumerator } from "../src/plugin-services/plugin-query-service/plugin-enumerator";
+import { PluginQuery } from "../src/plugin-services/plugin-query-service/plugin-query";
+import { PluginInfo } from "../src/plugin-services/plugin-query-service/plugin-info";
+import { PluginUploadService } from "../src/plugin-services/plugin-upload-service/plugin-upload-service";
+import { SessionQueryAll } from "../src/session-services/session-query-service/session-query-all";
+import { SessionQueryById } from "../src/session-services/session-query-service/session-query-by-id";
+import { SessionQueryService } from "../src/session-services/session-query-service/session-query-service";
+import { SessionQueryConfiguration } from "../src/session-services/session-query-service/session-query-configuration";
 
 const port = 8001;
 const target = 'http://jccsubweb.newgen.corp';
 
 export class OnionTestSetup  {
-  private log : Log;
+
   private proxyService : ProxyService;
   private configuration : Configuration = new Configuration();
   private markupModifier : MarkupModifier;
 
   private infusionPluginServer : QueryService;
+
+  private log : Log;
+  private servicebus : ServiceBus;
+  private proxyDictionary : Dictionary;
+
+  constructor(log : Log) {
+    this.log = log;
+    this.servicebus = new RabbitMqServiceBus(this.log);
+    this.proxyDictionary = new RedisDictionary(this.log);
+  }
+
   public startTest() {
-    this.log = new WinstonLog();
     this.startupSessionWriterService(3001);    
-    //this.startupProxyService(3000,3001);
+    this.startupProxyFactoryService();
     this.startupInfusionPluginServer(3002);
-    this.startupAutomatedXmlService(3004);
     this.startupSessionQueryService(3005);
     this.startupPluginUploadService(3006);
     this.startupPortalServer(3007);
     this.startupTestService(3008);
+    this.startupProxyProviderService()
   }
 
-  private startupProxyService(port : number, sessionWriterPort : number) {
-    this.configuration.modifications =  this.getModifications();   
-    this.markupModifier = new MarkupModifier(this.log);
-    this.proxyService = new ProxyService(this.log, this.markupModifier, this.configuration );
-    let clientToSessionWriter = request.createClient(`http://localhost:${sessionWriterPort}`)
-    this.proxyService.listen(3000,target, port);
+  private startupProxyProviderService() {
+    let providerService = new ProxyProviderService(this.log, this.servicebus,this.configuration, this.proxyDictionary );
+    providerService.listen();
+
+    let sb = new RabbitMqServiceBus(this.log);
+    sb.listen(ProxyProviderResponse.event, (response : ProxyProviderResponse) => {
+      this.log.warn(`oniontest - received proxy provider response: ${response.url}`);
+    });    
+    let sb2 = new RabbitMqServiceBus(this.log);
+    sb2.send(ProxyProviderRequest.event, new ProxyProviderRequest('jccsub'));
+    setTimeout(() => {
+      let sb3 = new RabbitMqServiceBus(this.log);
+      sb3.listen(ProxyProviderResponse.event, (response : ProxyProviderResponse) => {
+        this.log.warn(`oniontest - received proxy provider response: ${response.url}`);
+      });    
+      sb3.send(ProxyProviderRequest.event, new ProxyProviderRequest('jccsub'));
+    },  5000);
   }
+
+  
+  private startupProxyFactoryService() {
+    this.configuration.modifications =  this.getModifications();   
+    let proxyFactory = new ProxyFactoryService (this.log, new RabbitMqServiceBus(this.log), this.configuration); 
+    proxyFactory.listen();       
+   }
 
   private startupTestService(port : number) {
     let clientPath = '\\..\\..\\src\\test-service';
@@ -85,11 +118,6 @@ export class OnionTestSetup  {
 
   }
 
-  private startupAutomatedXmlService(port : number) {
-    let automatedHtml = new AutomatedHtmlService(this.log);
-    automatedHtml.listen(port)
-    
-  }
 
   private startupPortalServer(port: number) {
     let clientPath = path.join(__dirname,'\\..\\..\\dist');

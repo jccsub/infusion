@@ -4,10 +4,26 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "nyc mocha --recursive ./dist",
-    "cover": "jest --coverage",
+    "test": "nyc mocha",
     "start": "node dist/src/index.js"
-  },
+  },  
+  "nyc": {
+
+    "include": [
+      "src/**/*.ts"
+    ],
+    "extension" : [".ts", ".tsx"],
+    "exclude" : [
+      "**/*.d.ts"
+    ],
+    "require" : ["ts-node/register"],
+    "reporter": [
+      "html"
+    ],
+
+    "sourceMap" : true,
+    "instrument" : true
+  },  
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -47,11 +63,14 @@
     "react-bootstrap": "^0.31.3",
     "react-dom": "^15.6.1",
     "react-router-dom": "^4.2.2",
+    "redis": "^2.8.0",
     "request": "^2.81.0",
     "request-json": "^0.6.2",
+    "servicebus": "^2.0.10",
     "style-loader": "^0.18.2",
     "svg-inline-loader": "^0.8.0",
     "typemoq": "^2.0.1",
+    "url-exists": "^1.0.3",
     "webpack": "^3.5.6",
     "webpack-dev-server": "^2.8.0",
     "webpack-stream": "^4.0.0",
@@ -75,23 +94,5 @@
     "ts-node": "^3.3.0",
     "typescript": "^2.4.2",
     "url-loader": "^0.5.9"
-  },
-  "nyc": {
-    "exclude": [
-      "**/infusions/**",
-      "**/plugins/**"
-    ]
-  },
-  "jest": {
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js"
-    ],
-    "mapCoverage": true,
-    "transform": {
-      "\\.(ts|tsx)$": "<rootDir>/node_modules/ts-jest/preprocessor.js"
-    },
-    "testRegex": "/src/.*/tests/.*\\.(ts|tsx)$"
   }
 }
