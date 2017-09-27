@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import Header from '../common/Header';
 
 class Home extends Component {
   login() {
@@ -8,9 +9,10 @@ class Home extends Component {
     const { isAuthenticated } = this.props.auth;
     return (
       <div className="container">
+        <Header/>
         {
           isAuthenticated() && (
-              <h4>
+              <h4>                
                 You are logged in!
               </h4>
             )

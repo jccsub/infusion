@@ -6,24 +6,27 @@
   "scripts": {
     "test": "nyc mocha",
     "start": "node dist/src/index.js"
-  },  
+  },
   "nyc": {
-
     "include": [
       "src/**/*.ts"
     ],
-    "extension" : [".ts", ".tsx"],
-    "exclude" : [
+    "extension": [
+      ".ts",
+      ".tsx"
+    ],
+    "exclude": [
       "**/*.d.ts"
     ],
-    "require" : ["ts-node/register"],
+    "require": [
+      "ts-node/register"
+    ],
     "reporter": [
       "html"
     ],
-
-    "sourceMap" : true,
-    "instrument" : true
-  },  
+    "sourceMap": true,
+    "instrument": true
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -62,6 +65,7 @@
     "react": "^15.6.1",
     "react-bootstrap": "^0.31.3",
     "react-dom": "^15.6.1",
+    "react-router": "^4.2.0",
     "react-router-dom": "^4.2.2",
     "redis": "^2.8.0",
     "request": "^2.81.0",

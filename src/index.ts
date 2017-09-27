@@ -6,3 +6,5 @@ let log = new WinstonLog();
 //var testSetup = new OnionTestSetup(log);
 var testSetup = new ClientTest(log);
 testSetup.startTest();
+
+
